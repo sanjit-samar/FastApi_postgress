@@ -1,9 +1,14 @@
 from typing import List
 from fastapi import FastAPI, Response, status, HTTPException
+from sqlalchemy.exc import IntegrityError
 from . import model, schemas
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
 from fastapi import Depends
+
+from pwdlib import PasswordHash
+
+password_hash = PasswordHash.recommended()
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI()
@@ -75,3 +80,27 @@ def delete_post(id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# Users Part
+@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.User)
+def create_user(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db),
+):
+    """Create a new user"""
+    # Hash the password
+    user.password = password_hash.hash(user.password)
+
+    new_user = model.User(**user.model_dump())
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
+        )
+
+    return new_user
