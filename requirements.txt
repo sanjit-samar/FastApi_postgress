@@ -7,3 +7,4 @@ pydantic
 alembic
 httpx
 pwdlib[argon2]
+pyjwt
