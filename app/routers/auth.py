@@ -5,7 +5,7 @@ from .. import database, model, schemas, utils, oauth2
 router = APIRouter(tags=["login"])
 
 
-@router.post("/login")
+@router.post("/login", response_model=schemas.Token)
 def login_user(
     user_Credentials: schemas.UserLogin, db: Session = Depends(database.get_db)
 ):
@@ -24,4 +24,6 @@ def login_user(
         )
     # create a token if user is valid
     access_token = oauth2.create_access_token(data={"user_id": user.id})
+
+    # returning token as bearer token so from client need to set in local/session storage
     return {"access_token": access_token, "token_type": "bearer"}
