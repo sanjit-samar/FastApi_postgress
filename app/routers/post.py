@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import Response, status, HTTPException, APIRouter
 
 from app import oauth2
@@ -15,8 +15,19 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 def get_posts(
     db: Session = Depends(get_db),
     current_user=Depends(oauth2.get_current_user),
+    limit: int = 5,
+    skip: int = 0,
+    search: Optional[str] = "",
 ):
-    posts = db.query(model.Post).filter(model.Post.owner_id == current_user.id).all()
+    posts = (
+        db.query(model.Post)
+        .filter(model.Post.owner_id == current_user.id)
+        .filter(model.Post.title.ilike(f"%{search}%"))
+        .order_by(model.Post.id)
+        .limit(limit)
+        .offset(skip)
+        .all()
+    )
 
     return posts
 
